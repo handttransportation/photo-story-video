@@ -1,0 +1,77 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// SQLite has no native enum support in Prisma; these are plain strings
+// constrained by the app-level constants in lib/status.ts:
+// ProjectStatus: DRAFT | ANALYZING | PLANNING | GENERATING | ASSEMBLING | COMPLETE | FAILED
+// ShotStatus: PENDING | GENERATING | COMPLETE | FAILED
+
+model Project {
+  id          String @id @default(cuid())
+  status      String @default("DRAFT")
+  stylePrompt String?
+  errorMessage String?
+
+  audioPath     String?
+  audioFilename String?
+  audioDuration Float?
+  audioEnergy   String?
+
+  // AI Director analysis output (JSON-encoded)
+  analysisJson String?
+  planJson     String?
+
+  outputPath     String?
+  outputDuration Float?
+
+  photos Photo[]
+  shots  Shot[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Photo {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  filename String
+  path     String
+  order    Int
+  width    Int?
+  height   Int?
+
+  // Per-photo analysis (JSON-encoded): description, mood, role, subjects
+  analysisJson String?
+
+  createdAt DateTime @default(now())
+}
+
+model Shot {
+  id        String     @id @default(cuid())
+  projectId String
+  project   Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  photoId       String
+  sequence      Int
+  role          String
+  prompt        String
+  targetSeconds Float
+  status        String @default("PENDING")
+
+  providerName    String?
+  providerJobId   String?
+  clipPath        String?
+  clipDuration    Float?
+  errorMessage    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

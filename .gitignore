@@ -1,0 +1,9 @@
+node_modules
+.next
+.env
+storage/uploads
+storage/generated
+storage/output
+*.db
+*.db-journal
+.DS_Store
