@@ -3,6 +3,10 @@ import { promisify } from 'util';
 
 const execFileAsync = promisify(execFile);
 
+/** Probes duration via ffprobe. Works for any media container (audio or
+ *  video) despite the audio-flavored name — kept as one implementation so
+ *  every duration check in the app (uploaded songs, generated clips, final
+ *  MP4s) goes through the same code path. */
 export async function getAudioDuration(filePath: string): Promise<number> {
   const { stdout } = await execFileAsync('ffprobe', [
     '-v', 'error',
@@ -11,9 +15,11 @@ export async function getAudioDuration(filePath: string): Promise<number> {
     filePath,
   ]);
   const seconds = parseFloat(stdout.trim());
-  if (!Number.isFinite(seconds)) throw new Error('Could not determine audio duration');
+  if (!Number.isFinite(seconds)) throw new Error(`Could not determine media duration for ${filePath}`);
   return seconds;
 }
+
+export const getMediaDuration = getAudioDuration;
 
 export type AudioEnergy = 'low' | 'medium' | 'high';
 

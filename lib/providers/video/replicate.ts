@@ -1,7 +1,7 @@
 import { readFile } from 'fs/promises';
 import path from 'path';
 import { saveBuffer } from '../../storage/local';
-import { getAudioDuration as probeDuration } from '../../audio/probe';
+import { getMediaDuration as probeDuration } from '../../audio/probe';
 import { VideoGenError, type VideoGenInput, type VideoGenProvider, type VideoGenResult } from './types';
 
 const REPLICATE_API = 'https://api.replicate.com/v1';

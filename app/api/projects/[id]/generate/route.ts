@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
 import { runPipeline } from '@/lib/pipeline/run';
 import { ProjectStatus } from '@/lib/status';
+import { config, isRealVideoGenerationReady } from '@/lib/config';
 
 export async function POST(_req: NextRequest, { params }: { params: { id: string } }) {
   const project = await prisma.project.findUnique({ where: { id: params.id }, include: { photos: true } });
@@ -9,11 +10,11 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
   if (!project.audioPath) return NextResponse.json({ error: 'Project has no audio uploaded' }, { status: 400 });
   if (project.photos.length < 5) return NextResponse.json({ error: 'Project needs at least 5 photos' }, { status: 400 });
 
-  if (!process.env.REPLICATE_API_TOKEN) {
+  if (config.videoProvider === 'replicate' && !isRealVideoGenerationReady()) {
     return NextResponse.json(
       {
         error:
-          'REPLICATE_API_TOKEN is not configured on the server. Add it to .env (see .env.example) to enable real video generation.',
+          'REPLICATE_API_TOKEN is not configured on the server. Add it to .env (see .env.example) to enable real video generation, or set VIDEO_PROVIDER=mock to test the rest of the app.',
       },
       { status: 503 }
     );

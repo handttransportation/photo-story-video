@@ -15,6 +15,13 @@ interface ShotStatus {
   targetSeconds: number;
   clipDuration: number | null;
   errorMessage: string | null;
+  providerName: string | null;
+}
+
+interface ConfigResponse {
+  videoProvider: 'replicate' | 'mock';
+  realVideoGenerationReady: boolean;
+  aiDirectorReady: boolean;
 }
 
 interface ProjectStatusResponse {
@@ -56,7 +63,15 @@ export default function Home() {
   const [formError, setFormError] = useState<string | null>(null);
   const [projectId, setProjectId] = useState<string | null>(null);
   const [status, setStatus] = useState<ProjectStatusResponse | null>(null);
+  const [appConfig, setAppConfig] = useState<ConfigResponse | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    fetch('/api/config')
+      .then((r) => r.json())
+      .then(setAppConfig)
+      .catch(() => setAppConfig(null));
+  }, []);
 
   const photoPreviews = useRef<string[]>([]);
 
@@ -187,6 +202,7 @@ export default function Home() {
 
   const isBusy = phase === 'uploading' || phase === 'processing';
   const progressIndex = status ? STATUS_ORDER.indexOf(status.status) : -1;
+  const isTestMode = appConfig ? !appConfig.realVideoGenerationReady : false;
 
   return (
     <main className="min-h-screen bg-canvas text-white">
@@ -196,6 +212,20 @@ export default function Home() {
           <p className="mt-2 text-white/60">
             Upload 5–20 photos and a song. We&apos;ll direct, generate, and cut a real 10–15 second cinematic story.
           </p>
+          {appConfig && (
+            <div
+              className={`mt-4 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium ${
+                isTestMode
+                  ? 'border-amber-500/40 bg-amber-500/10 text-amber-300'
+                  : 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300'
+              }`}
+            >
+              <span className={`h-1.5 w-1.5 rounded-full ${isTestMode ? 'bg-amber-400' : 'bg-emerald-400'}`} />
+              {isTestMode
+                ? 'Test mode — clips are placeholder motion, not real AI video (Replicate not enabled)'
+                : 'Live — real AI video generation via Replicate'}
+            </div>
+          )}
         </header>
 
         {phase === 'form' || phase === 'error' ? (
@@ -340,33 +370,43 @@ export default function Home() {
           </div>
         )}
 
-        {phase === 'complete' && status?.outputPath && (
-          <div className="space-y-6">
-            <div className="overflow-hidden rounded-xl border border-white/10 bg-panel">
-              <video
-                src={status.outputPath}
-                controls
-                playsInline
-                className="mx-auto max-h-[70vh] w-auto bg-black"
-              />
+        {phase === 'complete' && status?.outputPath && (() => {
+          const isMockOutput = status.shots.some((s) => s.providerName === 'mock');
+          return (
+            <div className="space-y-6">
+              {isMockOutput && (
+                <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-300">
+                  This is a <strong>test render</strong>: real motion/timing/audio pipeline, but the clips are a
+                  local placeholder pan/zoom effect, not AI-generated video (watermarked below). Enable Replicate
+                  to produce the real cinematic version.
+                </div>
+              )}
+              <div className="overflow-hidden rounded-xl border border-white/10 bg-panel">
+                <video
+                  src={status.outputPath}
+                  controls
+                  playsInline
+                  className="mx-auto max-h-[70vh] w-auto bg-black"
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-white/60">
+                  Final duration: {formatDuration(status.outputDuration)} · Story: {status.analysis?.subject}
+                </p>
+                <a
+                  href={status.outputPath}
+                  download={`photo-story-video-${projectId}.mp4`}
+                  className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:brightness-110"
+                >
+                  Download {isMockOutput ? 'test MP4' : 'MP4'}
+                </a>
+              </div>
+              <button onClick={startOver} className="text-sm text-white/50 underline">
+                Start a new video
+              </button>
             </div>
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-white/60">
-                Final duration: {formatDuration(status.outputDuration)} · Story: {status.analysis?.subject}
-              </p>
-              <a
-                href={status.outputPath}
-                download={`photo-story-video-${projectId}.mp4`}
-                className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:brightness-110"
-              >
-                Download MP4
-              </a>
-            </div>
-            <button onClick={startOver} className="text-sm text-white/50 underline">
-              Start a new video
-            </button>
-          </div>
-        )}
+          );
+        })()}
       </div>
     </main>
   );

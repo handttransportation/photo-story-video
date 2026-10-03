@@ -23,6 +23,18 @@ export async function saveBuffer(
   return { filename, absolutePath, publicUrl: `/api/media/${bucket}/${filename}` };
 }
 
+/** Reserves a fresh path in a bucket for a caller (e.g. ffmpeg) that writes the
+ *  file itself, rather than handing us a buffer to save. */
+export async function preparePath(
+  bucket: StorageBucket,
+  extension: string
+): Promise<{ absolutePath: string; publicUrl: string }> {
+  const dir = path.join(STORAGE_ROOT, bucket);
+  await mkdir(dir, { recursive: true });
+  const filename = `${randomUUID()}.${extension.replace(/^\./, '')}`;
+  return { absolutePath: path.join(dir, filename), publicUrl: `/api/media/${bucket}/${filename}` };
+}
+
 export function absolutePathFor(bucket: StorageBucket, filename: string): string {
   return path.join(STORAGE_ROOT, bucket, filename);
 }

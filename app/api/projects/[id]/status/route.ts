@@ -40,6 +40,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
       targetSeconds: s.targetSeconds,
       clipDuration: s.clipDuration,
       errorMessage: s.errorMessage,
+      providerName: s.providerName,
     })),
   });
 }
